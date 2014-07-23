@@ -37,5 +37,13 @@
             "shutdown_command" : "{{user `shutdown_command`}}",
             "vm_name"          : "{{user `name`}}"
         }
+    ],
+    "provisioners": [
+        {
+            "type": "shell",
+            "scripts": [
+                "scripts/packages.sh"
+            ]
+        }
     ]
 }
