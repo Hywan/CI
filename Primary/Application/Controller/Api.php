@@ -10,14 +10,20 @@ class Api extends Generic {
 
     public function HookAction ( ) {
 
-        echo 'hook: ';
-
         $port    = $this->findFreeEphemeralPort();
-        var_dump($port);
+        echo 'ephemeral port: '; var_dump($port);
         $content = json_encode(['port' => $port]);
 
+        $configurations = require_once 'hoa://Data/Etc/Configuration/Ci.php';
+
         $fastcgi = new Fastcgi\Responder(
-            new Socket\Client('tcp://127.0.0.1:9001')
+            new Socket\Client(
+                sprintf(
+                    'tcp://%s:%s',
+                    $configurations['primary.fpm.address'],
+                    $configurations['primary.fpm.port']
+                )
+            )
         );
         $fastcgi->send(
             [
@@ -34,9 +40,6 @@ class Api extends Generic {
         );
 
         var_dump($fastcgi->getResponseHeaders());
-        var_dump($fastcgi->getResponseContent());
-
-
     }
 
     protected function findFreeEphemeralPort ( ) {

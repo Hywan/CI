@@ -35,10 +35,16 @@ if(!isset($data['port'])) {
     exit(2);
 }
 
-$port   = $data['port'];
-$uri    = 'tcp://127.0.0.1:' . $port;
-$id     = sha1(uniqid('ci', true));
-$router = require_once 'hoa://Application/Router.php';
+$configurations = require_once 'hoa://Data/Etc/Configuration/Ci.php';
+
+$port           = $data['port'];
+$uri            = sprintf(
+    'tcp://%s:%s',
+    $configurations['primary.address'],
+    $port
+);
+$id             = sha1(uniqid('ci', true));
+$router         = require_once 'hoa://Application/Router.php';
 
 $response->sendStatus($response::STATUS_CREATED);
 $response->sendHeader('Location', $router->unroute('job', ['id' => $id]));
@@ -59,13 +65,19 @@ Zombie::fork();
 
 $content = json_encode(['websocketUri' => $uri]);
 $fastcgi = new Fastcgi\Responder(
-    new Socket\Client('tcp://127.0.0.1:9001')
+    new Socket\Client(
+        sprintf(
+            'tcp://%s:%s',
+            $configurations['standby.fpm.address'],
+            $configurations['standby.fpm.port']
+        )
+    )
 );
 $fastcgi->send(
     [
         'REQUEST_METHOD'  => 'POST',
         'REQUEST_URI'     => '/',
-        'SCRIPT_FILENAME' => resolve('hoa://Application/External/Standby/Worker/Job.php'),
+        'SCRIPT_FILENAME' => $configurations['standby.root'] . 'Worker/Job.php',
         'CONTENT_TYPE'    => 'application/json',
         'CONTENT_LENGTH'  => strlen($content)
     ],

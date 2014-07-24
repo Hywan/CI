@@ -39,6 +39,7 @@ $uri = $data['websocketUri'];
 $response->sendStatus($response::STATUS_CREATED);
 
 Zombie::fork();
+sleep(1);
 
 file_put_contents(__DIR__ . DS . 'Log', 'There' . "\n", FILE_APPEND);
 file_put_contents(__DIR__ . DS . 'Log', 'uri: ' . $uri . '' . "\n", FILE_APPEND);
