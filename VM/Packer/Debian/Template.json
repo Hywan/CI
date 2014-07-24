@@ -35,19 +35,15 @@
                 "<esc><wait>auto url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg<enter>"
             ],
             "shutdown_command" : "{{user `shutdown_command`}}",
-            "vm_name"          : "{{user `name`}}",
-
-            "vboxmanage"       : [
-                ["modifyvm", "{{.Name}}", "--nic1", "bridged"]
-            ]
+            "vm_name"          : "{{user `name`}}"
         }
     ],
     "provisioners": [
         {
             "type": "shell",
             "scripts": [
-                "scripts/packages.sh",
-                "scripts/ci.sh"
+                "Scripts/Packages.sh",
+                "Scripts/Ci.sh"
             ]
         }
     ]
