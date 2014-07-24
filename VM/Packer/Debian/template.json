@@ -38,7 +38,7 @@
             "vm_name"          : "{{user `name`}}",
 
             "vboxmanage"       : [
-                ["modifyvm", "{{.Name}}", "--nic1 bridged"]
+                ["modifyvm", "{{.Name}}", "--nic1", "bridged"]
             ]
         }
     ],
