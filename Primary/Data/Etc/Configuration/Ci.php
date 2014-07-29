@@ -12,7 +12,7 @@ return [
 
 
     // Address of the FPM server for the standby.
-    'standby.fpm.address' => '192.168.0.108',
+    'standby.fpm.address' => '192.168.0.107',
 
     // Port of the FPM server for the standby.
     'standby.fpm.port'    => '9001',

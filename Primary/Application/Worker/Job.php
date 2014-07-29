@@ -35,35 +35,56 @@ if(!isset($data['port'])) {
     exit(2);
 }
 
+if(!isset($data['hook'])) {
+
+    $response->sendStatus($response::STATUS_BAD_REQUEST);
+    echo 'Hook is missing.', "\n";
+
+    exit(3);
+}
+
 $configurations = require_once 'hoa://Data/Etc/Configuration/Ci.php';
 
-$port           = $data['port'];
-$uri            = sprintf(
+$port   = $data['port'];
+$uri    = sprintf(
     'tcp://%s:%s',
     $configurations['primary.address'],
     $port
 );
-$id             = sha1(uniqid('ci', true));
-$router         = require_once 'hoa://Application/Router.php';
+$id     = sha1(uniqid('ci', true));
+$router = require_once 'hoa://Application/Router.php';
 
 $response->sendStatus($response::STATUS_CREATED);
-$response->sendHeader('Location', $router->unroute('job', ['id' => $id]));
+$response->sendHeader(
+    'Location',
+    $router->unroute(
+        'job',
+        [
+            'id'         => $id,
+            '_subdomain' => '__self__'
+        ]
+    )
+);
 
 require_once 'hoa://Application/Database.php';
 $database  = Database\Dal::getInstance('jobs');
 $statement = $database->prepare(
-    'INSERT INTO jobs (id, websocketUri, status) ' .
-    'VALUES (:id, :websocketUri, :status)'
+    'INSERT INTO jobs (id, datetime, websocketUri, status) ' .
+    'VALUES (:id, :datetime, :websocketUri, :status)'
 );
 $statement->execute([
     'id'           => $id,
+    'datetime'     => time(),
     'websocketUri' => $uri,
     'status'       => Job::STATUS_PENDING
 ]);
 
 Zombie::fork();
 
-$content = json_encode(['websocketUri' => $uri]);
+$content = json_encode([
+    'websocketUri' => $uri,
+    'hook'         => $data['hook']
+]);
 $fastcgi = new Fastcgi\Responder(
     new Socket\Client(
         sprintf(
