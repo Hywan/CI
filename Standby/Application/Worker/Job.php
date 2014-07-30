@@ -63,13 +63,11 @@ $workspace .= $wId;
 File\Directory::create($workspace);
 
 $commands = [
-    ['php'  => ['-r', 'echo getcwd();']],
-    ['ls'   => []],
-    ['who'  => []],
-    ['date' => []],
-    ['git'  => ['clone', '--no-checkout', $hook['repository_uri'], '.']],
-    ['git'  => ['checkout', '--quiet', $hook['head_commit_id']]],
-    ['ls'   => []]
+    ['php'   => ['-r', 'echo getcwd();']],
+    ['git'   => ['clone', '--no-checkout', $hook['repository_uri'], '.']],
+    ['git'   => ['checkout', '--quiet', $hook['head_commit_id']]],
+    ['ls'    => []],
+    ['atoum' => ['-d', 'tests']]
 ];
 
 $exitCode = 0;
@@ -82,7 +80,10 @@ foreach($commands as $line) {
             $command,
             $options,
             null,
-            $workspace
+            $workspace,
+            [
+                'PATH' => '/usr/local/bin:/usr/bin:/bin'
+            ]
         );
         $processus->on('start', function ( Core\Event\Bucket $bucket )
                                      use ( $websocket ) {
@@ -113,8 +114,6 @@ foreach($commands as $line) {
 
         $processus->close();
         unset($processus);
-
-        sleep(1);
     }
 }
 
