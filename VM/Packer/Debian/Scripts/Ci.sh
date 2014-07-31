@@ -60,6 +60,7 @@ for version in `echo '5.5.3 5.5.9'`; do
     ./configure \
         --prefix=/Development/Php/$version/ \
         --disable-all \
+        --enable-json \
         --enable-fpm
     make
     make install

@@ -13,6 +13,7 @@ use Hoa\Socket;
 use Hoa\Websocket;
 use Hoa\File;
 use Hoa\Console;
+use Hoa\Fastcgi;
 
 $response = new Http\Response(false);
 
@@ -60,14 +61,19 @@ $workspace  = File\Temporary::getTemporaryDirectory() . DS . 'Ci' . DS;
 while(is_dir($wId = sha1(uniqid('ci', true))));
 $workspace .= $wId;
 
-File\Directory::create($workspace);
+if(false === File\Directory::create($workspace)) {
+
+    $websocket->send('Cannot create the workspace: ' . $workspace);
+    $websocket->send('@ci:CLOSE');
+
+    exit;
+}
 
 $commands = [
     ['php'   => ['-r', 'echo getcwd();']],
     ['git'   => ['clone', '--no-checkout', $hook['repository_uri'], '.']],
     ['git'   => ['checkout', '--quiet', $hook['head_commit_id']]],
-    ['ls'    => []],
-    ['atoum' => ['-d', 'tests']]
+    ['ls'    => []]
 ];
 
 $exitCode = 0;
@@ -107,9 +113,9 @@ foreach($commands as $line) {
 
         if(false === $processus->isSuccessful()) {
 
-            $exitCode = 1;
-
-            break 2;
+            $websocket->send('///// :-(');
+            $websocket->send('@ci:CLOSE');
+            exit(4);
         }
 
         $processus->close();
@@ -117,7 +123,44 @@ foreach($commands as $line) {
     }
 }
 
-$websocket->send('Exit code:' . $exitCode);
-$websocket->send('@ci:CLOSE');
+$websocket->send('////// Repository is ready!');
+sleep(2);
+
+$fpmPool = file('/Development/Php/Pool');
+
+foreach($fpmPool as $entry) {
+
+    list($version, $port) = explode(' ', $entry);
+
+    $websocket->send('///// Start ' . $version);
+
+    $content = json_encode([
+        'websocketUri' => $data['websocketUri']
+    ]);
+    $websocket->send('[[[[[' . $content . ']]]]]');
+
+    $fastcgi = new Fastcgi\Responder(
+        new Socket\Client('tcp://127.0.0.1:' . $port)
+    );
+    $fastcgi->send(
+        [
+            'REQUEST_METHOD'  => 'POST',
+            'REQUEST_URI'     => '/',
+            'SCRIPT_FILENAME' => resolve('hoa://Application/Worker/Code.php'),
+            'CONTENT_TYPE'    => 'application/json',
+            'CONTENT_LENGTH'  => strlen($content)
+        ],
+        $content
+    );
+
+    $websocket->send(
+        $version . ' => ' .
+        var_export($fastcgi->getResponseHeaders(), true)
+    );
+    $websocket->send(
+        $version . ' => ' .
+        $fastcgi->getResponseContent()
+    );
+}
 
 }

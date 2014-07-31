@@ -3,6 +3,8 @@ sudo apt-get install -y git \
                         curl \
                         vim \
                         htop \
+                        autoconf \
+                        bison \
                         gcc \
                         make \
                         linux-headers-$(uname -r) \

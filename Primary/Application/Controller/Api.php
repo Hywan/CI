@@ -62,7 +62,7 @@ class Api extends Generic {
             [
                 'REQUEST_METHOD'  => 'POST',
                 'REQUEST_URI'     => '/',
-                'SCRIPT_FILENAME' => resolve('hoa://Application/Worker/Job.php'),
+                'SCRIPT_FILENAME' => resolve('hoa://Application/Worker/Code.php'),
                 'CONTENT_TYPE'    => 'application/json',
                 'CONTENT_LENGTH'  => strlen($content),
 
