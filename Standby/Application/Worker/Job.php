@@ -86,7 +86,10 @@ foreach($commands as $line) {
             null,
             $workspace,
             [
-                'PATH' => '/usr/local/bin:/usr/bin:/bin'
+                'PATH' => '/usr/local/bin' .
+                          ':/usr/bin' .
+                          ':/bin',
+                'PWD'  => $workspace
             ]
         );
         $processus->on('start', function ( Core\Event\Bucket $bucket )
@@ -121,9 +124,6 @@ foreach($commands as $line) {
     }
 }
 
-$websocket->send('////// Repository is ready!');
-sleep(2);
-
 $fpmPool = file('/Development/Php/Pool');
 
 $websocket->send('@ci@ wait ' . count($fpmPool));
@@ -135,10 +135,16 @@ foreach($fpmPool as $entry) {
     $websocket->send('///// Start ' . $version);
 
     $content = json_encode([
-        'websocketUri' => $data['websocketUri']
+        'websocketUri' => $data['websocketUri'],
+        'workspace'    => $workspace,
+        'environment'  => [
+            'PATH' => '/Development/Php/' . $version . '/bin' .
+                      ':/usr/local/bin' .
+                      ':/usr/bin' .
+                      ':/bin',
+            'PWD'  => $workspace
+        ]
     ]);
-    $websocket->send('[[[[[' . $content . ']]]]]');
-
     $fastcgi = new Fastcgi\Responder(
         new Socket\Client('tcp://127.0.0.1:' . $port)
     );

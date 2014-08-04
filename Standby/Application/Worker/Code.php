@@ -11,9 +11,7 @@ use Hoa\Http;
 use Hoa\Zombie;
 use Hoa\Socket;
 use Hoa\Websocket;
-use Hoa\File;
 use Hoa\Console;
-use Hoa\Fastcgi;
 
 $response = new Http\Response(false);
 
@@ -37,6 +35,26 @@ if(!isset($data['websocketUri'])) {
 
 $uri = $data['websocketUri'];
 
+if(!isset($data['workspace'])) {
+
+    $response->sendStatus($response::STATUS_BAD_REQUEST);
+    echo 'Workspace is missing.', "\n";
+
+    exit(3);
+}
+
+$workspace = $data['workspace'];
+
+if(!isset($data['environment'])) {
+
+    $response->sendStatus($response::STATUS_BAD_REQUEST);
+    echo 'Environment is missing.', "\n";
+
+    exit(4);
+}
+
+$environment = $data['environment'];
+
 $response->sendStatus($response::STATUS_CREATED);
 
 //Zombie::fork();
@@ -46,6 +64,53 @@ $websocket->setHost('php.ci');
 $websocket->connect();
 
 $websocket->send('Hello from ' . phpversion());
+
+$commands = [
+    ['atoum' => ['-d', 'tests']]
+];
+
+foreach($commands as $line) {
+
+    foreach($line as $command => $options) {
+
+        $processus = new Console\Processus(
+            $command,
+            $options,
+            null,
+            $workspace,
+            $environment
+        );
+        $processus->on('start', function ( Core\Event\Bucket $bucket )
+                                     use ( $websocket ) {
+
+            $websocket->send('$ ' . $bucket->getSource()->getCommandLine());
+
+            return false;
+        });
+        $processus->on('input', function ( ) {
+
+            return false;
+        });
+        $processus->on('output', function ( Core\Event\Bucket $bucket )
+                                      use ( $websocket ) {
+
+            $websocket->send($bucket->getData()['line']);
+
+            return;
+        });
+        $processus->run();
+
+        if(false === $processus->isSuccessful()) {
+
+            $websocket->send('///// :-(');
+            $websocket->send('@ci@ stop');
+            exit(4);
+        }
+
+        $processus->close();
+        unset($processus);
+    }
+}
 
 $websocket->send('@ci@ stop');
 

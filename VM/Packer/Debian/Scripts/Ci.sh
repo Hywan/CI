@@ -49,16 +49,16 @@ cd /Development/Php
 
 git clone \
     https://git.php.net/repository/php-src.git \
-    Source
+    PHP
 
-cd Source
+cd PHP
 
 for version in `echo '5.5.3 5.5.9'`; do
     mkdir /Development/Php/$version
     git checkout 'PHP-'$version
     ./buildconf --force
     ./configure \
-        --prefix=/Development/Php/$version/ \
+        --prefix=/Development/Php/PHP-$version/ \
         --disable-all \
         --enable-json \
         --enable-fpm
@@ -67,10 +67,10 @@ for version in `echo '5.5.3 5.5.9'`; do
     make clean
     make distclean
 
-    mv /Development/Php/$version/etc/php-fpm.conf.default \
-       /Development/Php/$version/etc/php-fpm.conf
+    mv /Development/Php/PHP-$version/etc/php-fpm.conf.default \
+       /Development/Php/PHP-$version/etc/php-fpm.conf
     sed -i'' -r 's/;?listen = (.*)$/listen = 9001/' \
-        /Development/Php/$version/etc/php-fpm.conf
+        /Development/Php/PHP-$version/etc/php-fpm.conf
 
     echo 'PHP-'$version >> /Development/Php/Pool
 done
