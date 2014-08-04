@@ -83,6 +83,7 @@ Zombie::fork();
 
 $content = json_encode([
     'websocketUri' => $uri,
+    'jobId'        => $id,
     'hook'         => $data['hook']
 ]);
 $fastcgi = new Fastcgi\Responder(
@@ -105,6 +106,8 @@ $fastcgi->send(
     $content
 );
 
+$superI = 0;
+
 $websocket = new Websocket\Server(new Socket\Server($uri));
 $websocket->on('open', function ( Core\Event\Bucket $bucket ) {
 
@@ -114,10 +117,31 @@ $websocket->on('open', function ( Core\Event\Bucket $bucket ) {
 });
 $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
                                                                        $id,
-                                                                       $database ) {
+                                                                       $database,
+                                                                       &$superI ) {
 
     $message = $bucket->getData()['message'];
 
+    if(0 !== preg_match('/^@ci@ wait (?<n>\d+)$/', $message, $match)) {
+
+        $superI += $match['n'];
+
+        return;
+    }
+    elseif(0 !== preg_match('/^@ci@ stop$/', $message)) {
+
+        --$superI;
+        $bucket->getSource()->close();
+
+        if(0 >= $superI) {
+
+            exit;
+        }
+
+        return;
+    }
+
+    /*
     if('@ci:CLOSE' === $message) {
 
         $statement = $database->prepare(
@@ -132,6 +156,7 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
 
         exit;
     }
+    */
 
     $bucket->getSource()->broadcast($bucket->getData()['message']);
 

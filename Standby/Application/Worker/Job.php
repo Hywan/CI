@@ -64,7 +64,7 @@ $workspace .= $wId;
 if(false === File\Directory::create($workspace)) {
 
     $websocket->send('Cannot create the workspace: ' . $workspace);
-    $websocket->send('@ci:CLOSE');
+    $websocket->send('@ci@ stop');
 
     exit;
 }
@@ -75,8 +75,6 @@ $commands = [
     ['git'   => ['checkout', '--quiet', $hook['head_commit_id']]],
     ['ls'    => []]
 ];
-
-$exitCode = 0;
 
 foreach($commands as $line) {
 
@@ -114,7 +112,7 @@ foreach($commands as $line) {
         if(false === $processus->isSuccessful()) {
 
             $websocket->send('///// :-(');
-            $websocket->send('@ci:CLOSE');
+            $websocket->send('@ci@ stop');
             exit(4);
         }
 
@@ -127,6 +125,8 @@ $websocket->send('////// Repository is ready!');
 sleep(2);
 
 $fpmPool = file('/Development/Php/Pool');
+
+$websocket->send('@ci@ wait ' . count($fpmPool));
 
 foreach($fpmPool as $entry) {
 
@@ -151,15 +151,6 @@ foreach($fpmPool as $entry) {
             'CONTENT_LENGTH'  => strlen($content)
         ],
         $content
-    );
-
-    $websocket->send(
-        $version . ' => ' .
-        var_export($fastcgi->getResponseHeaders(), true)
-    );
-    $websocket->send(
-        $version . ' => ' .
-        $fastcgi->getResponseContent()
     );
 }
 

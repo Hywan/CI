@@ -27,9 +27,6 @@ if(Http\Request::METHOD_POST !== Http\Runtime::getMethod()) {
 
 $data = Http\Runtime::getData();
 
-file_put_contents(__DIR__ . DS . 'outputcode', var_export($data, true),
-FILE_APPEND);
-
 if(!isset($data['websocketUri'])) {
 
     $response->sendStatus($response::STATUS_BAD_REQUEST);
@@ -42,12 +39,14 @@ $uri = $data['websocketUri'];
 
 $response->sendStatus($response::STATUS_CREATED);
 
-Zombie::fork();
+//Zombie::fork();
 
 $websocket = new Websocket\Client(new Socket\Client($uri));
 $websocket->setHost('php.ci');
 $websocket->connect();
 
-$websocket->send('Hello from . ' . phpversion());
+$websocket->send('Hello from ' . phpversion());
+
+$websocket->send('@ci@ stop');
 
 }
