@@ -25,45 +25,50 @@ if(Http\Request::METHOD_POST !== Http\Runtime::getMethod()) {
 
 $data = Http\Runtime::getData();
 
+if(!isset($data['id'])) {
+
+    $response->sendStatus($response::STATUS_BAD_REQUEST);
+    echo 'ID is missing.', "\n";
+
+    exit(2);
+}
+
 if(!isset($data['websocketUri'])) {
 
     $response->sendStatus($response::STATUS_BAD_REQUEST);
     echo 'WebSocket URI is missing.', "\n";
 
-    exit(2);
+    exit(3);
 }
-
-$uri = $data['websocketUri'];
 
 if(!isset($data['workspace'])) {
 
     $response->sendStatus($response::STATUS_BAD_REQUEST);
     echo 'Workspace is missing.', "\n";
 
-    exit(3);
+    exit(4);
 }
-
-$workspace = $data['workspace'];
 
 if(!isset($data['environment'])) {
 
     $response->sendStatus($response::STATUS_BAD_REQUEST);
     echo 'Environment is missing.', "\n";
 
-    exit(4);
+    exit(5);
 }
 
-$environment = $data['environment'];
+$id           = $data['id'];
+$websocketUri = $data['websocketUri'];
+$workspace    = $data['workspace'];
+$environment  = $data['environment'];
 
 $response->sendStatus($response::STATUS_CREATED);
 
 //Zombie::fork();
 
-$websocket = new Websocket\Client(new Socket\Client($uri));
-$websocket->setHost('php.ci');
+$websocket = new Websocket\Client(new Socket\Client($websocketUri));
+$websocket->setHost('standby.ci');
 $websocket->connect();
-
-$websocket->send('Hello from ' . phpversion());
 
 $commands = [
     ['atoum' => ['-d', 'tests']]
@@ -81,9 +86,16 @@ foreach($commands as $line) {
             $environment
         );
         $processus->on('start', function ( Core\Event\Bucket $bucket )
-                                     use ( $websocket ) {
+                                     use ( $websocket, $id ) {
 
-            $websocket->send('$ ' . $bucket->getSource()->getCommandLine());
+            $websocket->send(
+                sprintf(
+                    '@%s@%d@%s',
+                    $id,
+                    0,
+                    '$ ' . $bucket->getSource()->getCommandLine()
+                )
+            );
 
             return false;
         });
@@ -92,9 +104,16 @@ foreach($commands as $line) {
             return false;
         });
         $processus->on('output', function ( Core\Event\Bucket $bucket )
-                                      use ( $websocket ) {
+                                      use ( $websocket, $id ) {
 
-            $websocket->send($bucket->getData()['line']);
+            $websocket->send(
+                sprintf(
+                    '@%s@%d@%s',
+                    $id,
+                    0,
+                    $bucket->getData()['line']
+                )
+            );
 
             return;
         });
@@ -103,8 +122,14 @@ foreach($commands as $line) {
         if(false === $processus->isSuccessful()) {
 
             $websocket->send('///// :-(');
-            $websocket->send('@ci@ stop');
-            exit(4);
+            $websocket->send(
+                sprintf(
+                    '@%s@%d',
+                    $id,
+                    1
+                )
+            );
+            exit(6);
         }
 
         $processus->close();
@@ -112,6 +137,12 @@ foreach($commands as $line) {
     }
 }
 
-$websocket->send('@ci@ stop');
+$websocket->send(
+    sprintf(
+        '@%s@%d',
+        $id,
+        1
+    )
+);
 
 }

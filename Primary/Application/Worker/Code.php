@@ -51,7 +51,7 @@ $uri    = sprintf(
     $configurations['primary.address'],
     $port
 );
-$id     = sha1(uniqid('ci', true));
+$id     = sha1(uniqid('ci/primary', true));
 $router = require_once 'hoa://Application/Router.php';
 
 $response->sendStatus($response::STATUS_CREATED);
@@ -82,8 +82,8 @@ $statement->execute([
 Zombie::fork();
 
 $content = json_encode([
+    'primaryId'    => $id,
     'websocketUri' => $uri,
-    'jobId'        => $id,
     'hook'         => $data['hook']
 ]);
 $fastcgi = new Fastcgi\Responder(
@@ -120,25 +120,42 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
                                                                        $database,
                                                                        &$superI ) {
 
-    $message = $bucket->getData()['message'];
+    preg_match(
+        '#^@(?<id>[^@]+)@(?<code>[0-2])(@(?<message>.+))?$#',
+        $bucket->getData()['message'],
+        $message
+    );
 
-    if(0 !== preg_match('/^@ci@ wait (?<n>\d+)$/', $message, $match)) {
+    preg_match(
+        '#^(?<primary>[^/]+)/(?<version>[^/]+)/(?<standby>.+)$#',
+        $message['id'],
+        $ids
+    );
 
-        $superI += $match['n'];
+    switch(intval($message['code'])) {
 
-        return;
-    }
-    elseif(0 !== preg_match('/^@ci@ stop$/', $message)) {
+        case 2: // wait
+            $superI += intval($message['message']);
+          break;
 
-        --$superI;
-        $bucket->getSource()->close();
+        case 1: // stop
+            --$superI;
+            $bucket->getSource()->close();
 
-        if(0 >= $superI) {
+            if(0 >= $superI)
+                exit;
+          break;
 
-            exit;
-        }
-
-        return;
+        case 0: // log
+            $bucket->getSource()->broadcast(
+                sprintf(
+                    '@%s@%s@%s',
+                    $ids['version'],
+                    $ids['standby'],
+                    $message['message']
+                )
+            );
+          break;
     }
 
     /*
@@ -158,10 +175,9 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
     }
     */
 
-    $bucket->getSource()->broadcast($bucket->getData()['message']);
-
     return;
 });
+
 $websocket->run();
 
 }

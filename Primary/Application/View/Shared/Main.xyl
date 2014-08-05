@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xyl-stylesheet href="hoa://Library/Xyl/Css/Core.css"?>
+<?xyl-stylesheet href="hoa://Application/Public/Css/UI.css"?>
+<?xyl-meta name="viewport" content="initial-scale=1.0"?>
+
+<document xmlns="http://hoa-project.net/xyl/xylophone" id="document">
+  <title><value bind="?title" /> – CI</title>
+
+  <script src="hoa://Library/Xyl/Javascript/Hoa.js"></script>
+
+  <nav id="menu" aria-selected="false">
+    <ul>
+      <li>job 4</li>
+      <li>job 3</li>
+      <li>job 2</li>
+      <li>job 1</li>
+    </ul>
+  </nav>
+
+    <div class="body">
+
+      <header>
+        <h1>CI</h1>
+      </header>
+
+      <article id="content">
+        <yield id="yContent" />
+      </article>
+
+      <footer>
+        <p>footer</p>
+      </footer>
+
+    </div>
+</document>

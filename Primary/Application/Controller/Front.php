@@ -12,7 +12,10 @@ class Front extends Generic {
 
     public function HomeAction ( ) {
 
-        echo 'home', "\n";
+        $this->view->addOverlay('hoa://Application/View/En/Home.xyl');
+        $this->render();
+
+        return;
     }
 
     public function JobAction ( $id ) {
@@ -23,75 +26,31 @@ class Front extends Generic {
             'SELECT * FROM jobs WHERE id = :id'
         );
         $job       = $statement->execute(['id' => $id])->fetchAll()[0];
-        print_r($job);
-
-        $status = $job['status'];
-
-        echo 'Status: ';
+        $status    = $job['status'];
+        $_status   = null;
 
         if(0 !== ($status & Job::STATUS_PENDING))
-            echo 'pending';
+            $_status .= 'pending';
         else
-            echo 'done';
+            $_status .= 'done';
 
-        echo ' ';
+        $_status .= ' ';
 
         if(0 !== ($status & Job::STATUS_SUCCESS))
-            echo '(success)';
+            $_status .= '(success)';
         elseif(0 !== ($status & Job::STATUS_FAIL))
-            echo '(fail)';
+            $_status .= '(fail)';
         else
-            echo '(inconclusive)';
+            $_status .= '(inconclusive)';
 
         $host = str_replace('tcp:', 'ws:', $job['websocketUri']);
 
-        echo <<<OUTPUT
-<pre id="output"></pre>
-<script>
-    var host   = '$host';
-    var socket = null;
-    var output = document.getElementById('output');
-    var print  = function ( message ) {
+        $this->data->jobId         = $id;
+        $this->data->jobStatus     = $_status;
+        $this->data->websocketHost = $host;
 
-        var samp       = document.createElement('samp');
-        samp.innerHTML = message + '\\n';
-        output.appendChild(samp);
-
-        return;
-    };
-
-    try {
-
-        socket = new WebSocket(host);
-        socket.onopen = function ( ) {
-
-            print('connection is opened');
-            input.focus();
-
-            return;
-        };
-        socket.onmessage = function ( msg ) {
-
-            print(msg.data);
-
-            return;
-        };
-        socket.onclose = function ( e ) {
-
-            print(
-                'connection is closed (' + e.code + ' ' +
-                (e.reason || '—no reason—') + ')'
-            );
-
-            return;
-        };
-    }
-    catch ( e ) {
-
-        console.log(e);
-    }
-</script>
-OUTPUT;
+        $this->view->addOverlay('hoa://Application/View/En/Job.xyl');
+        $this->render();
     }
 }
 

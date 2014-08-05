@@ -27,12 +27,20 @@ if(Http\Request::METHOD_POST !== Http\Runtime::getMethod()) {
 
 $data = Http\Runtime::getData();
 
+if(!isset($data['primaryId'])) {
+
+    $response->sendStatus($response::STATUS_BAD_REQUEST);
+    echo 'Primary ID is missing.', "\n";
+
+    exit(2);
+}
+
 if(!isset($data['websocketUri'])) {
 
     $response->sendStatus($response::STATUS_BAD_REQUEST);
     echo 'WebSocket URI is missing.', "\n";
 
-    exit(2);
+    exit(3);
 }
 
 if(!isset($data['hook'])) {
@@ -40,11 +48,14 @@ if(!isset($data['hook'])) {
     $response->sendStatus($response::STATUS_BAD_REQUEST);
     echo 'Hook is missing.', "\n";
 
-    exit(3);
+    exit(4);
 }
 
-$uri  = $data['websocketUri'];
-$hook = $data['hook'];
+$primaryId    = $data['primaryId'];
+$standbyId    = sha1(uniqid('ci/standby', true));
+$id           = $primaryId . '/*/' . $standbyId;
+$websocketUri = $data['websocketUri'];
+$hook         = $data['hook'];
 
 $response->sendStatus($response::STATUS_CREATED);
 
@@ -53,12 +64,12 @@ Zombie::fork();
 // Wait the WebSocket server to be up.
 sleep(3);
 
-$websocket = new Websocket\Client(new Socket\Client($uri));
-$websocket->setHost('ci');
+$websocket = new Websocket\Client(new Socket\Client($websocketUri));
+$websocket->setHost('standby.ci');
 $websocket->connect();
 
 $workspace  = File\Temporary::getTemporaryDirectory() . DS . 'Ci' . DS;
-while(is_dir($wId = sha1(uniqid('ci', true))));
+while(is_dir($wId = sha1(uniqid('ci/standby', true))));
 $workspace .= $wId;
 
 if(false === File\Directory::create($workspace)) {
@@ -93,9 +104,16 @@ foreach($commands as $line) {
             ]
         );
         $processus->on('start', function ( Core\Event\Bucket $bucket )
-                                     use ( $websocket ) {
+                                     use ( $websocket, $id ) {
 
-            $websocket->send('$ ' . $bucket->getSource()->getCommandLine());
+            $websocket->send(
+                sprintf(
+                    '@%s@%d@%s',
+                    $id,
+                    0,
+                    '$ ' . $bucket->getSource()->getCommandLine()
+                )
+            );
 
             return false;
         });
@@ -104,9 +122,16 @@ foreach($commands as $line) {
             return false;
         });
         $processus->on('output', function ( Core\Event\Bucket $bucket )
-                                      use ( $websocket ) {
+                                      use ( $websocket, $id ) {
 
-            $websocket->send($bucket->getData()['line']);
+            $websocket->send(
+                sprintf(
+                    '@%s@%d@%s',
+                    $id,
+                    0,
+                    $bucket->getData()['line']
+                )
+            );
 
             return;
         });
@@ -115,8 +140,14 @@ foreach($commands as $line) {
         if(false === $processus->isSuccessful()) {
 
             $websocket->send('///// :-(');
-            $websocket->send('@ci@ stop');
-            exit(4);
+            $websocket->send(
+                sprintf(
+                    '@%s@%d',
+                    $id,
+                    1
+                )
+            );
+            exit(5);
         }
 
         $processus->close();
@@ -125,17 +156,32 @@ foreach($commands as $line) {
 }
 
 $fpmPool = file('/Development/Php/Pool');
+$websocket->send(
+    sprintf(
+        '@%s@%d@%d',
+        $id,
+        2,
+        count($fpmPool)
+    )
+);
 
-$websocket->send('@ci@ wait ' . count($fpmPool));
+$finalIdFormat = sprintf('%s/%%s/%s', $primaryId, $standbyId);
 
 foreach($fpmPool as $entry) {
 
     list($version, $port) = explode(' ', $entry);
 
-    $websocket->send('///// Start ' . $version);
+    $websocket->send(
+        sprintf(
+            '@%s@%d@%s',
+            0,
+            '# start ' . $version
+        )
+    );
 
     $content = json_encode([
-        'websocketUri' => $data['websocketUri'],
+        'id'           => sprintf($finalIdFormat, $version),
+        'websocketUri' => $websocketUri,
         'workspace'    => $workspace,
         'environment'  => [
             'PATH' => '/Development/Php/' . $version . '/bin' .

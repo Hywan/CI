@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<overlay xmlns="http://hoa-project.net/xyl/xylophone">
+  <yield id="yContent">
+    <h1>Job #<value bind="?jobId" /></h1>
+
+    <tabs id="output">
+      <tablist>
+        <tab for="one">foo</tab>
+        <tab for="two">bar</tab>
+        <tab for="three">baz</tab>
+        <tab for="four">qux</tab>
+      </tablist>
+
+      <tabpanel id="one">
+        <p>hopla 1</p>
+      </tabpanel>
+
+      <tabpanel id="two">
+        <p>hopla 2</p>
+      </tabpanel>
+
+      <tabpanel id="three">
+        <p>hopla 3</p>
+      </tabpanel>
+
+      <tabpanel id="four">
+        <p>hopla 4</p>
+      </tabpanel>
+    </tabs>
+
+    <p>Status: <value bind="?jobStatus" /></p>
+    <pre id="outputt"></pre>
+    <script>
+        var host   = '<value bind="?websocketHost" />';
+        var socket = null;
+        var output = document.getElementById('outputt');
+        var print  = function ( message ) {
+
+            var samp       = document.createElement('samp');
+            samp.innerHTML = message + '\n';
+            output.appendChild(samp);
+
+            return;
+        };
+
+        try {
+
+            socket = new WebSocket(host);
+            socket.onopen = function ( ) {
+
+                print('connection is opened');
+
+                return;
+            };
+            socket.onmessage = function ( msg ) {
+
+                print(msg.data);
+                // var tabs  = Hoa.Tabs.get('output');
+                // var panel = tabs.add('foo', 'PHP-5.5.3');
+
+                return;
+            };
+            socket.onclose = function ( e ) {
+
+                print(
+                    'connection is closed (' + e.code + ' ' +
+                    (e.reason || '—no reason—') + ')'
+                );
+
+                return;
+            };
+        }
+        catch ( e ) {
+
+            console.log(e);
+        }
+    </script>
+  </yield>
+</overlay>

@@ -69,7 +69,7 @@ for version in `echo '5.5.3 5.5.9'`; do
 
     mv /Development/Php/PHP-$version/etc/php-fpm.conf.default \
        /Development/Php/PHP-$version/etc/php-fpm.conf
-    sed -i'' -r 's/;?listen = (.*)$/listen = 9001/' \
+    sed -i'' -r 's/;?listen = (.*)$/listen = 127.0.0.1:10000/' \
         /Development/Php/PHP-$version/etc/php-fpm.conf
 
     echo 'PHP-'$version >> /Development/Php/Pool

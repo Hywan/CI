@@ -21,6 +21,11 @@ $router
         '/job/(?<id>[a-z0-9]{40})',
         'Front',
         'Job'
+    )
+
+    ->_get(
+        '_resource',
+        '/(?<resource>)'
     );
 
 return $router;
