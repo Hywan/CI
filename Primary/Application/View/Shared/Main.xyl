@@ -9,11 +9,7 @@
   <script src="hoa://Library/Xyl/Javascript/Hoa.js"></script>
 
   <nav id="menu" aria-selected="false">
-    <ul>
-      <li>job 4</li>
-      <li>job 3</li>
-      <li>job 2</li>
-      <li>job 1</li>
+    <ul id="job_list">
     </ul>
   </nav>
 
@@ -32,4 +28,42 @@
       </footer>
 
     </div>
+
+    <script>
+    (function ( ) {
+        var jobList = Hoa.$('#job_list');
+
+        try {
+
+            var source       = new EventSource('/api/event/last_jobs');
+            source.onmessage = function ( evt ) {
+
+                var data = JSON.parse(evt.data);
+
+                if(null === data)
+                    return;
+
+                jobList.insertBefore(
+                    Hoa.DOM.li(
+                        [
+                            Hoa.DOM.a(
+                                data.id,
+                                {
+                                    href: data.uri
+                                }
+                            )
+                        ]
+                    ),
+                    jobList.firstChild
+                );
+
+                return;
+            };
+        }
+        catch ( e ) {
+
+            console.log(e);
+        }
+    })();
+    </script>
 </document>

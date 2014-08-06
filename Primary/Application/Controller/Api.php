@@ -5,10 +5,17 @@ namespace Application\Controller {
 use Hoa\Http;
 use Hoa\Socket;
 use Hoa\Fastcgi;
+use Hoa\Eventsource;
+use Hoa\Database;
 
 use Application\Model;
 
 class Api extends Generic {
+
+    public function construct ( ) {
+
+        return;
+    }
 
     public function HookAction ( ) {
 
@@ -101,6 +108,56 @@ class Api extends Generic {
         fclose($server);
 
         return $port;
+    }
+
+    public function LastJobsAction ( ) {
+
+        try {
+
+            $server = new Eventsource\Server();
+        }
+        catch ( Eventsource\Exception $e ) {
+
+            echo 'You must send a request with ',
+                 '“Accept: ', Eventsource\Server::MIME_TYPE, '”.', "\n";
+
+            return;
+        }
+
+        $id = $server->getLastId();
+
+        require_once 'hoa://Application/Database.php';
+        $database  = Database\Dal::getInstance('jobs');
+
+        if(empty($id)) {
+
+            $statement = $database->prepare(
+                'SELECT id, datetime FROM jobs ' .
+                'ORDER BY datetime DESC LIMIT :limit'
+            );
+            $jobs      = array_reverse($statement->execute(['limit' => 5])->fetchAll());
+        }
+        else {
+
+            $statement = $database->prepare(
+                'SELECT id, datetime FROM jobs ' .
+                'WHERE datetime > :datetime'
+            );
+            $jobs      = $statement->execute(['datetime' => $id])->fetchAll();
+        }
+
+        if(empty($jobs))
+            $server->send(json_encode(null), $id);
+        else
+            foreach($jobs as $job) {
+
+                $job['uri'] = $this->router->unroute('job', ['id' => $job['id']]);
+                $server->send(json_encode($job), $job['datetime']);
+            }
+
+        $server->setReconnectionTime(5000);
+
+        return;
     }
 }
 

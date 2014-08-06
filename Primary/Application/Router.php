@@ -11,6 +11,12 @@ $router
         'Hook'
     )
     ->get(
+        'event_last_jobs',
+        '/api/event/last_jobs',
+        'Api',
+        'LastJobs'
+    )
+    ->get(
         'home',
         '/',
         'Front',
