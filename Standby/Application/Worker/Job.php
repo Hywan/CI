@@ -35,12 +35,20 @@ if(!isset($data['primaryId'])) {
     exit(2);
 }
 
+if(!isset($data['token'])) {
+
+    $response->sendStatus($response::STATUS_BAD_REQUEST);
+    echo 'Token is missing.', "\n";
+
+    exit(3);
+}
+
 if(!isset($data['websocketUri'])) {
 
     $response->sendStatus($response::STATUS_BAD_REQUEST);
     echo 'WebSocket URI is missing.', "\n";
 
-    exit(3);
+    exit(4);
 }
 
 if(!isset($data['hook'])) {
@@ -48,11 +56,12 @@ if(!isset($data['hook'])) {
     $response->sendStatus($response::STATUS_BAD_REQUEST);
     echo 'Hook is missing.', "\n";
 
-    exit(4);
+    exit(5);
 }
 
 $primaryId    = $data['primaryId'];
-$standbyId    = sha1(uniqid('ci/standby', true));
+$token        = $data['token'];
+$standbyId    = sha1(uniqid('ci/standby/id', true));
 $id           = $primaryId . '/*/' . $standbyId;
 $websocketUri = $data['websocketUri'];
 $hook         = $data['hook'];
@@ -67,6 +76,13 @@ sleep(3);
 $websocket = new Websocket\Client(new Socket\Client($websocketUri));
 $websocket->setHost('standby.ci');
 $websocket->connect();
+
+$websocket->send(
+    sprintf(
+        '@token@%s',
+        $token
+    )
+);
 
 $workspace  = File\Temporary::getTemporaryDirectory() . DS . 'Ci' . DS;
 while(is_dir($wId = sha1(uniqid('ci/standby', true))));
@@ -90,7 +106,7 @@ if(false === File\Directory::create($workspace)) {
         )
     );
 
-    exit;
+    exit(6);
 }
 
 $commands = [
@@ -167,7 +183,7 @@ foreach($commands as $line) {
                     1
                 )
             );
-            exit(5);
+            exit(7);
         }
 
         $processus->close();
@@ -201,6 +217,7 @@ foreach($fpmPool as $entry) {
 
     $content = json_encode([
         'id'           => sprintf($finalIdFormat, $version),
+        'token'        => $token,
         'websocketUri' => $websocketUri,
         'workspace'    => $workspace,
         'environment'  => [

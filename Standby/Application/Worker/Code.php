@@ -33,12 +33,20 @@ if(!isset($data['id'])) {
     exit(2);
 }
 
+if(!isset($data['token'])) {
+
+    $response->sendStatus($response::STATUS_BAD_REQUEST);
+    echo 'Token is missing.', "\n";
+
+    exit(3);
+}
+
 if(!isset($data['websocketUri'])) {
 
     $response->sendStatus($response::STATUS_BAD_REQUEST);
     echo 'WebSocket URI is missing.', "\n";
 
-    exit(3);
+    exit(4);
 }
 
 if(!isset($data['workspace'])) {
@@ -46,7 +54,7 @@ if(!isset($data['workspace'])) {
     $response->sendStatus($response::STATUS_BAD_REQUEST);
     echo 'Workspace is missing.', "\n";
 
-    exit(4);
+    exit(5);
 }
 
 if(!isset($data['environment'])) {
@@ -54,10 +62,11 @@ if(!isset($data['environment'])) {
     $response->sendStatus($response::STATUS_BAD_REQUEST);
     echo 'Environment is missing.', "\n";
 
-    exit(5);
+    exit(6);
 }
 
 $id           = $data['id'];
+$token        = $data['token'];
 $websocketUri = $data['websocketUri'];
 $workspace    = $data['workspace'];
 $environment  = $data['environment'];
@@ -69,6 +78,13 @@ $response->sendStatus($response::STATUS_CREATED);
 $websocket = new Websocket\Client(new Socket\Client($websocketUri));
 $websocket->setHost('standby.ci');
 $websocket->connect();
+
+$websocket->send(
+    sprintf(
+        '@token@%s',
+        $token
+    )
+);
 
 $commands = [
     ['atoum' => ['-d', 'tests']]
@@ -136,7 +152,7 @@ foreach($commands as $line) {
                     1
                 )
             );
-            exit(6);
+            exit(7);
         }
 
         $processus->close();

@@ -13,6 +13,7 @@ use Hoa\Socket;
 use Hoa\Websocket;
 use Hoa\Database;
 use Application\Model\Job;
+use Application\Model\Worker\Node;
 use Hoa\Fastcgi;
 
 $response = new Http\Response(false);
@@ -51,7 +52,8 @@ $uri    = sprintf(
     $configurations['primary.address'],
     $port
 );
-$id     = sha1(uniqid('ci/primary', true));
+$id     = sha1(uniqid('ci/primary/id', true));
+$token  = sha1(uniqid('ci/primary/token', true));
 $router = require_once 'hoa://Application/Router.php';
 
 $response->sendStatus($response::STATUS_CREATED);
@@ -83,6 +85,7 @@ Zombie::fork();
 
 $content = json_encode([
     'primaryId'    => $id,
+    'token'        => $token,
     'websocketUri' => $uri,
     'hook'         => $data['hook']
 ]);
@@ -110,6 +113,7 @@ $waiting = 0;
 $status  = Job::STATUS_SUCCESS;
 
 $websocket = new Websocket\Server(new Socket\Server($uri));
+$websocket->getConnection()->setNodeName('\Application\Model\Worker\Node');
 $websocket->on('open', function ( Core\Event\Bucket $bucket ) {
 
     //$bucket->getSource()->getConnection()->quiet();
@@ -118,13 +122,47 @@ $websocket->on('open', function ( Core\Event\Bucket $bucket ) {
 });
 $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
                                                                        $id,
+                                                                       $token,
                                                                        $database,
                                                                        &$waiting,
                                                                        &$status ) {
 
+    $source      = $bucket->getSource();
+    $currentNode = $source->getConnection()->getCurrentNode();
+    $_message    = $bucket->getData()['message'];
+
+    if(null === $currentNode->getToken()) {
+
+        if(0 === preg_match('#^@token@(?<token>.+)$#', $_message, $match)) {
+
+            $source->close(
+                $source::CLOSE_POLICY_ERROR,
+                'You are not authorized to send messages to this server, ' .
+                'just to read them.'
+            );
+
+            return;
+        }
+
+        if($match['token'] !== $token) {
+
+            $source->close(
+                $source::CLOSE_POLICY_ERROR,
+                'Your token mismatch. You seem to not be authorized to send ' .
+                'messages to this server, just to read them.'
+            );
+
+            return;
+        }
+
+        $currentNode->setToken($token);
+
+        return;
+    }
+
     preg_match(
         '#^@(?<id>[^@]+)@(?<code>[0-3])(@(?<message>.+))?$#',
-        $bucket->getData()['message'],
+        $_message,
         $message
     );
 
@@ -142,7 +180,12 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
             else
                 $status = Job::STATUS_FAIL;
 
-            $bucket->getSource()->broadcast(
+            $source->broadcastIf(
+                function ( Node $node ) {
+
+                    // client from the primary
+                    return null === $node->getToken();
+                },
                 sprintf(
                     '!%s@%s@%s',
                     $ids['version'],
@@ -158,7 +201,7 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
 
         case 1: // stop
             --$waiting;
-            $bucket->getSource()->close();
+            $source->close();
 
             if(0 >= $waiting) {
 
@@ -175,7 +218,12 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
           break;
 
         case 0: // log
-            $bucket->getSource()->broadcast(
+            $source->broadcastIf(
+                function ( Node $node ) {
+
+                    // client from the primary
+                    return null === $node->getToken();
+                },
                 sprintf(
                     '@%s@%s@%s',
                     $ids['version'],
