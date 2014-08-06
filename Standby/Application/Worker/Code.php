@@ -121,7 +121,14 @@ foreach($commands as $line) {
 
         if(false === $processus->isSuccessful()) {
 
-            $websocket->send('///// :-(');
+            $websocket->send(
+                sprintf(
+                    '@%s@%d@%s',
+                    $id,
+                    3,
+                    'Command `' . $processus->getCommandLine() . '` has failed.'
+                )
+            );
             $websocket->send(
                 sprintf(
                     '@%s@%d',

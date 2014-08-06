@@ -106,7 +106,8 @@ $fastcgi->send(
     $content
 );
 
-$superI = 0;
+$waiting = 0;
+$status  = Job::STATUS_SUCCESS;
 
 $websocket = new Websocket\Server(new Socket\Server($uri));
 $websocket->on('open', function ( Core\Event\Bucket $bucket ) {
@@ -118,10 +119,11 @@ $websocket->on('open', function ( Core\Event\Bucket $bucket ) {
 $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
                                                                        $id,
                                                                        $database,
-                                                                       &$superI ) {
+                                                                       &$waiting,
+                                                                       &$status ) {
 
     preg_match(
-        '#^@(?<id>[^@]+)@(?<code>[0-2])(@(?<message>.+))?$#',
+        '#^@(?<id>[^@]+)@(?<code>[0-3])(@(?<message>.+))?$#',
         $bucket->getData()['message'],
         $message
     );
@@ -134,16 +136,42 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
 
     switch(intval($message['code'])) {
 
+        case 3: // error
+            if('*' === $version)
+                $status = Job::STATUS_ERROR;
+            else
+                $status = Job::STATUS_FAIL;
+
+            $bucket->getSource()->broadcast(
+                sprintf(
+                    '!%s@%s@%s',
+                    $ids['version'],
+                    $ids['standby'],
+                    '❌  ' . $message['message']
+                )
+            );
+          break;
+
         case 2: // wait
-            $superI += intval($message['message']);
+            $waiting += intval($message['message']);
           break;
 
         case 1: // stop
-            --$superI;
+            --$waiting;
             $bucket->getSource()->close();
 
-            if(0 >= $superI)
+            if(0 >= $waiting) {
+
+                $statement = $database->prepare(
+                    'UPDATE jobs SET status = :status WHERE id = :id'
+                );
+                $statement->execute([
+                    'id'     => $id,
+                    'status' => Job::STATUS_DONE | $status
+                ]);
+
                 exit;
+            }
           break;
 
         case 0: // log
@@ -157,23 +185,6 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
             );
           break;
     }
-
-    /*
-    if('@ci:CLOSE' === $message) {
-
-        $statement = $database->prepare(
-            'UPDATE jobs SET status = :status WHERE id = :id'
-        );
-        $statement->execute([
-            'id'     => $id,
-            'status' => Job::STATUS_DONE
-        ]);
-
-        $bucket->getSouce()->close();
-
-        exit;
-    }
-    */
 
     return;
 });

@@ -74,8 +74,21 @@ $workspace .= $wId;
 
 if(false === File\Directory::create($workspace)) {
 
-    $websocket->send('Cannot create the workspace: ' . $workspace);
-    $websocket->send('@ci@ stop');
+    $websocket->send(
+        sprintf(
+            '@%s@%d@%s',
+            $id,
+            3,
+            'Cannot create the workspace: ' . $workspace
+        )
+    );
+    $websocket->send(
+        sprintf(
+            '@%s@%d',
+            $id,
+            1
+        )
+    );
 
     exit;
 }
@@ -139,7 +152,14 @@ foreach($commands as $line) {
 
         if(false === $processus->isSuccessful()) {
 
-            $websocket->send('///// :-(');
+            $websocket->send(
+                sprintf(
+                    '@%s@%d@%s',
+                    $id,
+                    3,
+                    'Command `' . $processus->getCommandLine() . '` has failed.'
+                )
+            );
             $websocket->send(
                 sprintf(
                     '@%s@%d',

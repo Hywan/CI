@@ -12,6 +12,6 @@ curl -X POST \
      -H "X-Request-Id: 25d425c8-e215-4d19-bf47-bf3d97ce7b91" \
      -H "User-Agent: GitHub Hookshot f3c60ab" \
      -H "Total-Route-Time: 0" \
-     -d @Github_event.json \
+     -d @Github_event_ok.json \
      127.0.0.1/api/hook \
      --verbose
