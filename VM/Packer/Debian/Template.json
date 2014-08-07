@@ -32,7 +32,7 @@
             "http_port_max"    : "{{user `http_port_max`}}",
             "boot_wait"        : "{{user `boot_wait`}}",
             "boot_command"     : [
-                "<esc><wait>auto url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg<enter>"
+                "<esc><wait>auto url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/Preseed.cfg<enter>"
             ],
             "shutdown_command" : "{{user `shutdown_command`}}",
             "vm_name"          : "{{user `name`}}"
