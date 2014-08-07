@@ -1,86 +1,120 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <overlay xmlns="http://hoa-project.net/xyl/xylophone">
-  <yield id="yContent">
-    <h1>Job #<value bind="?jobId" /></h1>
+  <yield id="yContent" bind="?job">
+    <h1>Job #<value bind="?id" /></h1>
 
     <tabs id="output">
       <tablist></tablist>
     </tabs>
 
-    <p>Status: <value bind="?jobStatus" /></p>
+    <p>Status: <value bind="?status" /></p>
+
     <script>
-        var host         = '<value bind="?websocketHost" />';
-        var socket       = null;
+      (function ( ) {
+
         var scheduler    = new Hoa.Concurrent.Scheduler();
         var output       = Hoa.Tabs.get('output');
         var outputPanels = {};
-        var onmessage    = function ( msg ) {
+        var onmessage    = function ( message ) {
 
-              var regex   = /^@([^@]+)@([^@]+)@(.+)$/;
-              var matches = msg.data.match(regex);
+            var regex   = /^@([^@]+)@([^@]+)@(.+)$/;
+            var matches = message.match(regex);
 
-              if(null === matches) {
+            if(null === matches) {
 
-                  console.log('Unknown message: ' + msg.data);
-
-                  return;
-              }
-
-              var version   = matches[1];
-              var standbyId = matches[2];
-              var message   = matches[3];
-              var panel     = null;
-
-              if(undefined === outputPanels[version]) {
-
-                  var _panel = output.add(undefined, version);
-                  var pre    = Hoa.DOM.pre();
-                  _panel.appendChild(pre);
-
-                  panel = outputPanels[version] = {
-                      panel : _panel,
-                      output: pre
-                  };
-              }
-              else
-                  panel = outputPanels[version];
-
-              panel.output.appendChild(
-                  Hoa.DOM.samp(message + '\n')
-              )
-
-              return;
-          };
-
-        try {
-
-            socket = new WebSocket(host);
-            socket.onopen = function ( ) {
-
-                console.log('connection is opened');
+                console.log('Unknown message: ' + message);
 
                 return;
-            };
-            socket.onmessage = function ( msg ) {
+            }
 
-                scheduler.schedule(function ( ) { onmessage(msg); });
-                scheduler.spawn();
-            };
-            socket.onclose = function ( e ) {
+            var version   = matches[1];
+            var standbyId = matches[2];
+            var message   = matches[3];
+            var panel     = null;
 
-                console.log(
-                    'connection is closed (' + e.code + ' ' +
-                    (e.reason || '—no reason—') + ')'
-                );
+            if(undefined === outputPanels[version]) {
 
-                return;
-            };
-        }
-        catch ( e ) {
+                var _panel = output.add(undefined, version);
+                var pre    = Hoa.DOM.pre();
+                _panel.appendChild(pre);
 
-            console.log(e);
-        }
+                panel = outputPanels[version] = {
+                    panel : _panel,
+                    output: pre
+                };
+            }
+            else
+                panel = outputPanels[version];
+
+            panel.output.appendChild(
+                Hoa.DOM.samp(message + '\n')
+            )
+
+            return;
+        };
+
+        <if test="boolean((?live))">
+          <yield>
+            var host   = '<value bind = "?websocketUri" />';
+            var socket = null;
+
+            try {
+
+                socket = new WebSocket(host);
+                socket.onopen = function ( ) {
+
+                    console.log('connection is opened');
+
+                    return;
+                };
+                socket.onmessage = function ( msg ) {
+
+                    var message = JSON.parse(msg.data);
+
+                    if(typeof message === 'string')
+                        message = [message];
+
+                    message.forEach(function ( value ) {
+
+                        scheduler.schedule(function ( ) {
+
+                            onmessage(value);
+                        });
+                    });
+                    scheduler.spawn();
+                };
+                socket.onclose = function ( e ) {
+
+                    console.log(
+                        'connection is closed (' + e.code + ' ' +
+                        (e.reason || '—no reason—') + ')'
+                    );
+
+                    return;
+                };
+            }
+            catch ( e ) {
+
+                console.log(e);
+            }
+          </yield>
+        </if>
+        <else>
+          <yield>
+            var logs = <value bind="?logs" />;
+            logs.forEach(function ( value ) {
+
+                scheduler.schedule(function ( ) {
+
+                      onmessage(value);
+                });
+            });
+            scheduler.spawn();
+          </yield>
+        </else>
+      })();
     </script>
+
   </yield>
 </overlay>

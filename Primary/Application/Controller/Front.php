@@ -28,9 +28,13 @@ class Front extends Generic {
         $job       = $statement->execute(['id' => $id])->fetchAll()[0];
         $status    = $job['status'];
         $_status   = null;
+        $live      = false;
 
-        if(0 !== ($status & Job::STATUS_PENDING))
+        if(0 !== ($status & Job::STATUS_PENDING)) {
+
             $_status .= 'pending';
+            $live     = true;
+        }
         else
             $_status .= 'done';
 
@@ -43,12 +47,18 @@ class Front extends Generic {
         else
             $_status .= '(inconclusive)';
 
-        $host = str_replace('tcp:', 'ws:', $job['websocketUri']);
+        $data = [
+            'live'   => (int) $live,
+            'id'     => $id,
+            'status' => $_status
+        ];
 
-        $this->data->jobId         = $id;
-        $this->data->jobStatus     = $_status;
-        $this->data->websocketHost = $host;
+        if(true === $live)
+            $data['websocketUri'] = str_replace('tcp:', 'ws:', $job['websocketUri']);
+        else
+            $data['logs']         = $job['logs'];
 
+        $this->data->job = $data;
         $this->view->addOverlay('hoa://Application/View/En/Job.xyl');
         $this->render();
     }

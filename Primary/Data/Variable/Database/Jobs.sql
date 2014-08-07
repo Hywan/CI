@@ -5,6 +5,7 @@ CREATE TABLE jobs (
     datetime     INTEGER,
     websocketUri VARCHAR(45),
     status       INTEGER,
+    logs         TEXT,
 
     PRIMARY KEY(id)
 );

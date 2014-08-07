@@ -152,6 +152,7 @@ foreach($commands as $line) {
                     1
                 )
             );
+            $websocket->close();
             exit(7);
         }
 
@@ -167,5 +168,6 @@ $websocket->send(
         1
     )
 );
+$websocket->close();
 
 }

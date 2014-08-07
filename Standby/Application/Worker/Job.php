@@ -105,6 +105,7 @@ if(false === File\Directory::create($workspace)) {
             1
         )
     );
+    $websocket->close();
 
     exit(6);
 }
@@ -183,6 +184,7 @@ foreach($commands as $line) {
                     1
                 )
             );
+            $websocket->close();
             exit(7);
         }
 
@@ -210,6 +212,7 @@ foreach($fpmPool as $entry) {
     $websocket->send(
         sprintf(
             '@%s@%d@%s',
+            $id,
             0,
             '# start ' . $version
         )
@@ -242,5 +245,14 @@ foreach($fpmPool as $entry) {
         $content
     );
 }
+
+$websocket->send(
+    sprintf(
+        '@%s@%d',
+        $id,
+        1
+    )
+);
+$websocket->close();
 
 }

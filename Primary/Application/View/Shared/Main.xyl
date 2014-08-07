@@ -36,6 +36,10 @@
         try {
 
             var source       = new EventSource('/api/event/last_jobs');
+            source.onopen    = function ( ) {
+
+                console.log('/api/event/last_jobs: opened');
+            };
             source.onmessage = function ( evt ) {
 
                 var data = JSON.parse(evt.data);

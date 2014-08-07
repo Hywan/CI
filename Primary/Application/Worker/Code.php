@@ -111,21 +111,22 @@ $fastcgi->send(
 
 $waiting = 0;
 $status  = Job::STATUS_SUCCESS;
+$buffer  = [];
 
 $websocket = new Websocket\Server(new Socket\Server($uri));
 $websocket->getConnection()->setNodeName('\Application\Model\Worker\Node');
-$websocket->on('open', function ( Core\Event\Bucket $bucket ) {
+$websocket->on('open', function ( Core\Event\Bucket $bucket ) use ( &$buffer ) {
 
-    //$bucket->getSource()->getConnection()->quiet();
+    $bucket->getSource()->send(json_encode($buffer));
 
     return;
 });
-$websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
-                                                                       $id,
+$websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $id,
                                                                        $token,
                                                                        $database,
                                                                        &$waiting,
-                                                                       &$status ) {
+                                                                       &$status,
+                                                                       &$buffer ) {
 
     $source      = $bucket->getSource();
     $currentNode = $source->getConnection()->getCurrentNode();
@@ -180,19 +181,21 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
             else
                 $status = Job::STATUS_FAIL;
 
+            $output = sprintf(
+                '!%s@%s@%s',
+                $ids['version'],
+                $ids['standby'],
+                '❌  ' . $message['message']
+            );
             $source->broadcastIf(
                 function ( Node $node ) {
 
                     // client from the primary
                     return null === $node->getToken();
                 },
-                sprintf(
-                    '!%s@%s@%s',
-                    $ids['version'],
-                    $ids['standby'],
-                    '❌  ' . $message['message']
-                )
+                json_encode($output)
             );
+            $buffer[] = $output;
           break;
 
         case 2: // wait
@@ -201,16 +204,17 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
 
         case 1: // stop
             --$waiting;
-            $source->close();
 
             if(0 >= $waiting) {
 
                 $statement = $database->prepare(
-                    'UPDATE jobs SET status = :status WHERE id = :id'
+                    'UPDATE jobs SET status = :status, logs = :logs ' .
+                    'WHERE id = :id'
                 );
                 $statement->execute([
                     'id'     => $id,
-                    'status' => Job::STATUS_DONE | $status
+                    'status' => Job::STATUS_DONE | $status,
+                    'logs'   => json_encode($buffer)
                 ]);
 
                 exit;
@@ -218,19 +222,21 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $port,
           break;
 
         case 0: // log
+            $output = sprintf(
+                '@%s@%s@%s',
+                $ids['version'],
+                $ids['standby'],
+                $message['message']
+            );
             $source->broadcastIf(
                 function ( Node $node ) {
 
                     // client from the primary
                     return null === $node->getToken();
                 },
-                sprintf(
-                    '@%s@%s@%s',
-                    $ids['version'],
-                    $ids['standby'],
-                    $message['message']
-                )
+                json_encode($output)
             );
+            $buffer[] = $output;
           break;
     }
 
