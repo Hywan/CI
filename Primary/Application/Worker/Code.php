@@ -207,6 +207,8 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $id,
 
             if(0 >= $waiting) {
 
+                $status |= Job::STATUS_DONE;
+
                 $statement = $database->prepare(
                     'UPDATE jobs SET status = :status, logs = :logs ' .
                     'WHERE id = :id'
@@ -216,6 +218,8 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $id,
                     'status' => Job::STATUS_DONE | $status,
                     'logs'   => json_encode($buffer)
                 ]);
+
+                Job::notifyStatus($status, 'github');
 
                 exit;
             }
