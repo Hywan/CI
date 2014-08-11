@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS oauth_tokens;
 CREATE TABLE oauth_services (
     resource_owner VARCHAR(127),
     socket_uri     VARCHAR(255),
+    socket_api_uri VARCHAR(255),
     login_uri      VARCHAR(255),
     token_uri      VARCHAR(255),
 
@@ -36,6 +37,7 @@ CREATE TABLE oauth_tokens (
 INSERT INTO oauth_services VALUES (
     'github',
     'tcp://github.com:443',
+    'tcp://api.github.com:443',
     'https://github.com/login/oauth/authorize',
     '/login/oauth/access_token'
 );

@@ -14,17 +14,18 @@ class Job {
     const STATUS_FAIL    =  8;
     const STATUS_ERROR   = 16;
 
-    public static function notifyStatus ( $status, $to ) {
+    public static function notifyStatus ( $status, $to, $commitId, $jobUri ) {
 
         require_once 'hoa://Application/Database.php';
         $database  = Database\Dal::getInstance('authorizations');
         $statement = $database->prepare(
-            'SELECT token FROM oauth_tokens ' .
-            'WHERE resource_owner = :resource_owner'
+            'SELECT s.socket_api_uri, t.token ' .
+            'FROM oauth_services AS s INNER JOIN oauth_tokens AS t ' .
+            'ON s.resource_owner = t.resource_owner ' .
+            'WHERE s.resource_owner = :resource_owner'
         );
         $result    = $statement->execute(['resource_owner' => $to])
                                ->fetchAll()[0];
-
         $state       = 'success';
         $description = 'Le Comte Intatto: ';
 
@@ -51,13 +52,13 @@ class Job {
 
         $body = json_encode([
             'state'       => $state,
-            'target_url'  => 'http://127.0.0.1/job/123',
+            'target_url'  => $jobUri,
             'description' => $description,
             'context'     => 'comte-intatto'
         ]);
         $request = new Http\Request();
         $request->setMethod($request::METHOD_POST);
-        $request->setUrl('/repos/Hywan/Foobar/statuses/f9be0e0472e3df3997052c799f9e01cbf8a85f92');
+        $request->setUrl('/repos/Hywan/Foobar/statuses/' . $commitId);
         $request['Host']           = 'api.github.com';
         $request['User-Agent']     = 'hoa/http';
         $request['Connection']     = 'close';
@@ -67,7 +68,7 @@ class Job {
         $request['Authorization']  = 'token ' . $result['token'];
         $request->setBody($body);
 
-        $client = new Socket\Client('tcp://api.github.com:443');
+        $client = new Socket\Client($result['socket_api_uri']);
         $client->connect();
         $client->setEncryption(true, $client::ENCRYPTION_TLS);
         $client->writeAll($request . $request->getBody() . CRLF);

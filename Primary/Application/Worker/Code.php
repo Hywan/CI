@@ -47,6 +47,7 @@ if(!isset($data['hook'])) {
 $configurations = require_once 'hoa://Data/Etc/Configuration/Ci.php';
 
 $port   = $data['port'];
+$hook   = $data['hook'];
 $uri    = sprintf(
     'tcp://%s:%s',
     $configurations['primary.address'],
@@ -55,18 +56,16 @@ $uri    = sprintf(
 $id     = sha1(uniqid('ci/primary/id', true));
 $token  = sha1(uniqid('ci/primary/token', true));
 $router = require_once 'hoa://Application/Router.php';
+$jobUri = $router->unroute(
+    'job',
+    [
+        'id'         => $id,
+        '_subdomain' => '__self__'
+    ]
+);
 
 $response->sendStatus($response::STATUS_CREATED);
-$response->sendHeader(
-    'Location',
-    $router->unroute(
-        'job',
-        [
-            'id'         => $id,
-            '_subdomain' => '__self__'
-        ]
-    )
-);
+$response->sendHeader('Location', $jobUri);
 
 require_once 'hoa://Application/Database.php';
 $database  = Database\Dal::getInstance('jobs');
@@ -87,7 +86,7 @@ $content = json_encode([
     'primaryId'    => $id,
     'token'        => $token,
     'websocketUri' => $uri,
-    'hook'         => $data['hook']
+    'hook'         => $hook
 ]);
 $fastcgi = new Fastcgi\Responder(
     new Socket\Client(
@@ -126,7 +125,9 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $id,
                                                                        $database,
                                                                        &$waiting,
                                                                        &$status,
-                                                                       &$buffer ) {
+                                                                       &$buffer,
+                                                                       $hook,
+                                                                       $jobUri ) {
 
     $source      = $bucket->getSource();
     $currentNode = $source->getConnection()->getCurrentNode();
@@ -215,11 +216,16 @@ $websocket->on('message', function ( Core\Event\Bucket $bucket ) use ( $id,
                 );
                 $statement->execute([
                     'id'     => $id,
-                    'status' => Job::STATUS_DONE | $status,
+                    'status' => $status,
                     'logs'   => json_encode($buffer)
                 ]);
 
-                Job::notifyStatus($status, 'github');
+                Job::notifyStatus(
+                    $status,
+                    'github',
+                    $hook['head_commit_id'],
+                    $jobUri
+                );
 
                 exit;
             }

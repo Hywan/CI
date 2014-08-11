@@ -68,6 +68,7 @@ class Api extends Blindgeneric {
 
         $port    = $this->findFreeEphemeralPort();
         echo 'ephemeral port: '; var_dump($port);
+        echo json_encode($hook), "\n";
         $content = json_encode([
             'port' => $port,
             'hook' => $hook
@@ -102,6 +103,8 @@ class Api extends Blindgeneric {
 
         $response->sendStatus($headers['status']);
         $response->sendHeader('Location', $headers['location']);
+
+        return;
     }
 
     protected function findFreeEphemeralPort ( ) {
