@@ -4,6 +4,7 @@ use Hoa\Router;
 
 $router = new Router\Http();
 $router
+    // API.
     ->post(
         'hook',
         '/api/hook',
@@ -16,6 +17,8 @@ $router
         'Api',
         'LastJobs'
     )
+
+    // Front.
     ->get(
         'home',
         '/',
@@ -29,6 +32,21 @@ $router
         'Job'
     )
 
+    // Authorization.
+    ->get(
+        'auth_oauth_request',
+        '/authorization/oauth/request-access/(?<resourceOwner>\w+)',
+        'Authorization\Oauth',
+        'RequestAccess'
+    )
+    ->get(
+        'auth_oauth_callback',
+        '/authorization/oauth/callback/(?<resourceOwner>\w+)',
+        'Authorization\Oauth',
+        'Callback'
+    )
+
+    // Private.
     ->_get(
         '_resource',
         '/(?<resource>)'
