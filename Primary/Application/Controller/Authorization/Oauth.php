@@ -143,6 +143,7 @@ class Oauth extends Blindgeneric {
         $request->setUrl($result['token_uri']);
         $request['Host']           = 'github.com';
         $request['Accept']         = 'application/json';
+        $request['Connection']     = 'close';
         $request['Content-Type']   = 'application/json';
         $request['Content-Length'] = strlen($body);
         $request->setBody($body);
