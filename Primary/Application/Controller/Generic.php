@@ -1,13 +1,13 @@
 <?php
 
-namespace Application\Controller {
+namespace Application\Controller;
 
 use Hoa\Dispatcher;
 use Hoa\File;
 use Hoa\Http;
 use Hoa\Xyl;
 
-class Generic extends Dispatcher\Kit {
+class Generic extends Blindgeneric {
 
     public function construct ( ) {
 
@@ -44,6 +44,4 @@ class Generic extends Dispatcher\Kit {
 
         return;
     }
-}
-
 }

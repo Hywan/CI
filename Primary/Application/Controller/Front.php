@@ -1,6 +1,6 @@
 <?php
 
-namespace Application\Controller {
+namespace Application\Controller;
 
 use Hoa\Core;
 use Hoa\Database;
@@ -62,6 +62,4 @@ class Front extends Generic {
         $this->view->addOverlay('hoa://Application/View/En/Job.xyl');
         $this->render();
     }
-}
-
 }

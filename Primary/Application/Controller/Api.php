@@ -1,6 +1,6 @@
 <?php
 
-namespace Application\Controller {
+namespace Application\Controller;
 
 use Hoa\Http;
 use Hoa\Socket;
@@ -10,12 +10,7 @@ use Hoa\Database;
 
 use Application\Model;
 
-class Api extends Generic {
-
-    public function construct ( ) {
-
-        return;
-    }
+class Api extends Blindgeneric {
 
     public function HookAction ( ) {
 
@@ -159,6 +154,4 @@ class Api extends Generic {
 
         return;
     }
-}
-
 }
