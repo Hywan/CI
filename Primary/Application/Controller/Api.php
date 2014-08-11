@@ -29,10 +29,34 @@ class Api extends Blindgeneric {
                 return;
             }
 
-            $repositoryUri = $payload['repository']['url'];
-            $headCommitId  = $payload['head_commit']['id'];
-            $hook          = new Model\Hook($repositoryUri);
-            $hook->setHeadCommitId($headCommitId);
+            if('push' === $event) {
+
+                $action = $payload['action'];
+
+                if(   'opened'      !== $action
+                   && 'reopened'    !== $action
+                   && 'synchronize' !== $action)
+                    return;
+
+                $repositoryUri = $payload['repository']['git_url'];
+                $headCommitId  = $payload['head_commit']['id'];
+                $hook          = new Model\Hook($repositoryUri);
+                $hook->setHeadCommitId($headCommitId);
+            }
+            elseif('pull_request' === $event) {
+
+                $repositoryUri = $payload['pull_request']['head']['repo']['git_url'];
+                $headCommitId  = $payload['pull_request']['head']['sha'];
+                $hook          = new Model\Hook($repositoryUri);
+                $hook->setHeadCommitId($headCommitId);
+            }
+            else {
+
+                $response->sendStatus($response::STATUS_NOT_IMPLEMENTED);
+                echo 'The event “' . $event . '” is not supported.';
+
+                return;
+            }
         }
         else {
 

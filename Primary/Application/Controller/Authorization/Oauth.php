@@ -153,7 +153,7 @@ class Oauth extends Blindgeneric {
         $client->setEncryption(true, $client::ENCRYPTION_TLS);
         $client->writeAll($request . $request->getBody() . CRLF);
         $clientResponse = new Http\Response(false);
-        $clientResponse->parse($a = $client->readAll());
+        $clientResponse->parse($client->readAll());
 
         $clientResult = json_decode($clientResponse->getBody(), true);
 
