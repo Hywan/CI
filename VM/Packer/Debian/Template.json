@@ -40,7 +40,18 @@
     ],
     "provisioners": [
         {
-            "type": "shell",
+            "type"   : "shell",
+            "scripts": [
+                "Scripts/Initialize.sh"
+            ]
+        },
+        {
+            "type"       : "file",
+            "source"     : "Scripts",
+            "destination": "/tmp/Packer"
+        },
+        {
+            "type"   : "shell",
             "scripts": [
                 "Scripts/Packages.sh",
                 "Scripts/Ci.sh"

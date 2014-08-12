@@ -54,11 +54,13 @@ git clone \
 cd PHP
 
 for version in `echo '5.5.3 5.5.9'`; do
+    prefix=/Development/Php/PHP-$version
+
     mkdir /Development/Php/$version
     git checkout 'PHP-'$version
     ./buildconf --force
     ./configure \
-        --prefix=/Development/Php/PHP-$version/ \
+        --prefix=$prefix/ \
         --disable-all \
         --enable-json \
         --enable-fpm
@@ -67,10 +69,25 @@ for version in `echo '5.5.3 5.5.9'`; do
     make clean
     make distclean
 
-    mv /Development/Php/PHP-$version/etc/php-fpm.conf.default \
-       /Development/Php/PHP-$version/etc/php-fpm.conf
+    mv $prefix/etc/php-fpm.conf.default \
+       $prefix/etc/php-fpm.conf
     sed -i'' -r 's/;?listen = (.*)$/listen = 127.0.0.1:10000/' \
-        /Development/Php/PHP-$version/etc/php-fpm.conf
+        $prefix/etc/php-fpm.conf
 
+    # init.d
+    initd=ci-php-$version # size must be lower than 15 characters.
+
+    sudo cp /tmp/Packer/Scripts/Template/Init.d/Php-fpm \
+            /etc/init.d/$initd
+    sudo chmod 755 /etc/init.d/$initd
+
+    sudo sed -i'' -e 's,{{PHP_PREFIX}},'$prefix',g' \
+            /etc/init.d/$initd
+    sudo sed -i'' -e 's,{{SCRIPT_NAME}},'$initd',g' \
+            /etc/init.d/$initd
+
+    sudo update-rc.d $initd defaults
+
+    # Pool
     echo 'PHP-'$version >> /Development/Php/Pool
 done
